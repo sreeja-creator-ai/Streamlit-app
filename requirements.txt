@@ -8,3 +8,6 @@ sentence-transformers
 pypdf
 groq
 pandas
+torch
+torchvision
+transformers
