@@ -32,10 +32,18 @@ def create_vector_store(pdf_file):
     return vectordb
 
 
-def generate_question(vectordb):
+import random
+
+def generate_question(vectordb, skills):
+
+    # Build the search query from extracted skills
+    if isinstance(skills, list):
+        query = " ".join(skills)
+    else:
+        query = str(skills)
 
     docs = vectordb.similarity_search(
-        "technical interview questions",
+        query,
         k=10
     )
 
@@ -45,7 +53,6 @@ def generate_question(vectordb):
 
         text = doc.page_content
 
-        # Split by question mark
         lines = text.split("?")
 
         for line in lines:
@@ -53,22 +60,15 @@ def generate_question(vectordb):
             line = line.strip()
 
             if len(line) > 5:
-                questions.append(
-                    line + "?"
-                )
+                questions.append(line + "?")
 
-    # Remove duplicates
-    questions = list(
-        set(questions)
-    )
+    # Remove duplicates while preserving order
+    questions = list(dict.fromkeys(questions))
 
-    if len(questions) > 0:
+    if questions:
+        return random.choice(questions)
 
-        return random.choice(
-            questions
-        )
-
-    return "No Question Found"
+    return "No relevant interview question found."
 
 
 if __name__ == "__main__":
