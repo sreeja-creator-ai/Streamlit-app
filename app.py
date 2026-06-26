@@ -55,6 +55,8 @@ if resume is not None:
     skills = extract_skills(
         resume_text
     )
+    # Save skills for RAG
+    st.session_state.skills = skills
 
     st.subheader("Detected Skills")
 
@@ -103,10 +105,12 @@ if interview_pdf is not None:
                 pdf_path
             )
 
-            question = generate_question(
-                vectordb
-            )
+            skills = st.session_state.get("skills", [])
 
+            question = generate_question(
+            vectordb,
+            skills
+            )
             st.session_state.question = (
                 question
             )
