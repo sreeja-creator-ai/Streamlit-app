@@ -6,22 +6,22 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 import random
 
 
-# ---------------------------------------------------
-# Create Chroma Vector Database
-# ---------------------------------------------------
+# -------------------------------------------------------
+# Create Vector Store
+# -------------------------------------------------------
 
 def create_vector_store(pdf_file):
 
     loader = PyPDFLoader(pdf_file)
 
-    documents = loader.load()
+    docs = loader.load()
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=50
     )
 
-    chunks = splitter.split_documents(documents)
+    chunks = splitter.split_documents(docs)
 
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -35,33 +35,25 @@ def create_vector_store(pdf_file):
     return vectordb
 
 
-# ---------------------------------------------------
+# -------------------------------------------------------
 # Generate Personalized Interview Question
-# ---------------------------------------------------
+# -------------------------------------------------------
 
 def generate_question(vectordb, skills):
 
-    # -----------------------------
-    # Build Search Query
-    # -----------------------------
+    # If no skills are detected, use a generic query
+    if skills:
 
-    if skills and len(skills) > 0:
-
-        query = f"""
-        Interview questions for a candidate skilled in:
-        {", ".join(skills)}
-
-        Focus only on these technologies.
-        """
+        query = (
+            "Interview questions related to "
+            + ", ".join(skills)
+        )
 
     else:
 
         query = "Technical interview questions"
 
-    # -----------------------------
-    # Retrieve Relevant Chunks
-    # -----------------------------
-
+    # Retrieve relevant documents
     docs = vectordb.similarity_search(
         query=query,
         k=10
@@ -69,76 +61,48 @@ def generate_question(vectordb, skills):
 
     questions = []
 
-    # -----------------------------
-    # Extract Questions
-    # -----------------------------
-
+    # Extract questions from retrieved documents
     for doc in docs:
 
         text = doc.page_content
 
-        parts = text.split("?")
+        lines = text.split("?")
 
-        for part in parts:
+        for line in lines:
 
-            part = part.strip()
+            line = line.strip()
 
-            if len(part) > 10:
+            if len(line) > 5:
 
-                question = part + "?"
+                question = line + "?"
 
                 questions.append(question)
 
-    # -----------------------------
-    # Remove Duplicates
-    # -----------------------------
-
+    # Remove duplicate questions
     questions = list(dict.fromkeys(questions))
 
-    # -----------------------------
-    # Return Question
-    # -----------------------------
+    # Return a relevant question
+    if questions:
 
-    if len(questions) == 0:
+        return random.choice(questions)
 
-        return (
-            "No interview question found "
-            "for the detected skills."
-        )
-
-    return random.choice(questions)
+    return "No relevant interview question found."
 
 
-# ---------------------------------------------------
-# Test
-# ---------------------------------------------------
+# -------------------------------------------------------
+# Testing
+# -------------------------------------------------------
 
 if __name__ == "__main__":
 
-    pdf = "Interview Questions.pdf"
+    pdf_file = r"Interview Questions.pdf"
 
-    vectordb = create_vector_store(pdf)
+    vectordb = create_vector_store(pdf_file)
 
     skills = [
         "Python",
-        "Machine Learning",
         "SQL",
-        "Pandas"
+        "Machine Learning"
     ]
 
-    for i in range(5):
-
-        print()
-
-        print("Question", i + 1)
-
-        print("-" * 60)
-
-        print(
-            generate_question(
-                vectordb,
-                skills
-            )
-        )
-
-        print("-" * 60)
+    print(generate_question(vectordb, skills))
