@@ -1,15 +1,15 @@
 import streamlit as st
 import tempfile
-import os
 
 from resume_parser import extract_resume_text
 from skill_extractor import extract_skills
 from rag import create_vector_store, generate_question
 from evaluator import evaluate_answer
+import os
 
 
 # --------------------------------------------------
-# Page Configuration
+# Streamlit Config
 # --------------------------------------------------
 
 st.set_page_config(
@@ -19,81 +19,78 @@ st.set_page_config(
 )
 
 st.title("🤖 InterviewGPT")
-st.subheader("AI Interview Coach using RAG + Groq")
+st.subheader("AI Interview Coach using Resume + RAG + Groq")
 
 st.markdown("---")
 
 
 # --------------------------------------------------
-# Load Interview Knowledge Base
+# Load Interview Question Knowledge Base
 # --------------------------------------------------
 
-PDF_PATH = "Interview Questions.pdf"
+PDF_PATH = "Interview_Questions.pdf"
 
-if not os.path.exists(PDF_PATH):
-    st.error("Interview Questions.pdf not found in project folder.")
-    st.stop()
-
-
+# Create vector database only once
 @st.cache_resource
-def load_vector_database():
+def load_vector_db():
     return create_vector_store(PDF_PATH)
 
-
-vectordb = load_vector_database()
+vectordb = load_vector_db()
 
 
 # --------------------------------------------------
-# Upload Resume
+# Resume Upload
 # --------------------------------------------------
 
 st.header("📄 Upload Resume")
 
 resume = st.file_uploader(
-    "Upload Resume PDF",
+    "Upload your Resume (PDF)",
     type=["pdf"]
 )
 
 
 if resume is not None:
 
-    # Save uploaded resume temporarily
     with tempfile.NamedTemporaryFile(
         delete=False,
         suffix=".pdf"
     ) as tmp:
 
         tmp.write(resume.read())
-
         resume_path = tmp.name
 
-    # Extract Resume Text
-    with st.spinner("Reading Resume..."):
 
-        resume_text = extract_resume_text(
-            resume_path
-        )
+    # -------------------------
+    # Resume Text
+    # -------------------------
 
-    st.success("Resume Uploaded Successfully")
-
-    st.subheader("Resume Preview")
-
-    st.write(
-        resume_text[:1000]
+    resume_text = extract_resume_text(
+        resume_path
     )
 
-    # Extract Skills
+    st.success("Resume Uploaded Successfully ✅")
+
+    with st.expander("Resume Preview"):
+
+        st.write(
+            resume_text[:1500]
+        )
+
+
+    # -------------------------
+    # Skills
+    # -------------------------
+
     skills = extract_skills(
         resume_text
     )
 
-    st.subheader("Detected Skills")
+    st.subheader("🛠 Extracted Skills")
 
     if skills:
 
-        st.success(
-            ", ".join(skills)
-        )
+        st.success(", ".join(skills))
 
     else:
 
@@ -101,18 +98,21 @@ if resume is not None:
             "No skills detected."
         )
 
+
+
     st.markdown("---")
 
-    # ----------------------------------------
-    # Generate Personalized Question
-    # ----------------------------------------
+
+    # --------------------------------------------------
+    # Personalized Question
+    # --------------------------------------------------
 
     if st.button(
         "Generate Personalized Interview Question"
     ):
 
         with st.spinner(
-            "Generating Personalized Question..."
+            "Generating Question..."
         ):
 
             question = generate_question(
@@ -122,31 +122,26 @@ if resume is not None:
 
             st.session_state.question = question
 
-        st.success(
-            "Question Generated Successfully"
-        )
 
 
 # --------------------------------------------------
-# Display Interview Question
+# Display Question
 # --------------------------------------------------
 
 if "question" in st.session_state:
 
-    st.markdown("---")
-
-    st.header(
-        "🎤 Interview Question"
-    )
+    st.header("🎤 Personalized Interview Question")
 
     st.info(
         st.session_state.question
     )
 
+
     answer = st.text_area(
         "Enter Your Answer",
-        height=200
+        height=220
     )
+
 
     if st.button(
         "Evaluate Answer"
@@ -171,16 +166,14 @@ if "question" in st.session_state:
 
             st.markdown("---")
 
-            st.header(
-                "📊 Interview Evaluation"
-            )
+            st.header("📊 Interview Feedback")
 
-            st.markdown(
-                feedback
-            )
+            st.markdown(feedback)
+
+
 
 st.markdown("---")
 
 st.caption(
-    "InterviewGPT | Resume Analysis | Personalized RAG | Groq"
+    "InterviewGPT | Resume Parsing | Skill Extraction | RAG | Groq"
 )
