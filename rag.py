@@ -1,24 +1,27 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 import random
 
 
+# ---------------------------------------------------
+# Create Chroma Vector Database
+# ---------------------------------------------------
+
 def create_vector_store(pdf_file):
 
     loader = PyPDFLoader(pdf_file)
 
-    docs = loader.load()
+    documents = loader.load()
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=50
     )
 
-    chunks = splitter.split_documents(docs)
+    chunks = splitter.split_documents(documents)
 
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -32,67 +35,110 @@ def create_vector_store(pdf_file):
     return vectordb
 
 
-import random
+# ---------------------------------------------------
+# Generate Personalized Interview Question
+# ---------------------------------------------------
 
 def generate_question(vectordb, skills):
 
-    if not skills:
-        query = "technical interview questions"
+    # -----------------------------
+    # Build Search Query
+    # -----------------------------
+
+    if skills and len(skills) > 0:
+
+        query = f"""
+        Interview questions for a candidate skilled in:
+        {", ".join(skills)}
+
+        Focus only on these technologies.
+        """
+
     else:
-        query = (
-            "Interview questions about "
-            + ", ".join(skills)
-        )
+
+        query = "Technical interview questions"
+
+    # -----------------------------
+    # Retrieve Relevant Chunks
+    # -----------------------------
 
     docs = vectordb.similarity_search(
-        query,
+        query=query,
         k=10
     )
 
     questions = []
 
+    # -----------------------------
+    # Extract Questions
+    # -----------------------------
+
     for doc in docs:
 
         text = doc.page_content
 
-        lines = text.split("?")
+        parts = text.split("?")
 
-        for line in lines:
+        for part in parts:
 
-            line = line.strip()
+            part = part.strip()
 
-            if len(line) > 5:
-                questions.append(
-                    line + "?"
-                )
+            if len(part) > 10:
 
-    # Remove duplicates
-    questions = list(
-        dict.fromkeys(questions)
-    )
+                question = part + "?"
 
-    if questions:
-        return random.choice(
-            questions
+                questions.append(question)
+
+    # -----------------------------
+    # Remove Duplicates
+    # -----------------------------
+
+    questions = list(dict.fromkeys(questions))
+
+    # -----------------------------
+    # Return Question
+    # -----------------------------
+
+    if len(questions) == 0:
+
+        return (
+            "No interview question found "
+            "for the detected skills."
         )
 
-    return "No relevant interview question found."
+    return random.choice(questions)
 
+
+# ---------------------------------------------------
+# Test
+# ---------------------------------------------------
 
 if __name__ == "__main__":
 
-    pdf_file = r"F:\Projects_Datav\genai_prompt\Interview Questions.pdf"
+    pdf = "Interview Questions.pdf"
 
-    vectordb = create_vector_store(
-        pdf_file
-    )
+    vectordb = create_vector_store(pdf)
+
+    skills = [
+        "Python",
+        "Machine Learning",
+        "SQL",
+        "Pandas"
+    ]
 
     for i in range(5):
 
+        print()
+
+        print("Question", i + 1)
+
+        print("-" * 60)
+
         print(
             generate_question(
-                vectordb
+                vectordb,
+                skills
             )
         )
 
-        print("-" * 50)
+        print("-" * 60)
