@@ -36,11 +36,13 @@ import random
 
 def generate_question(vectordb, skills):
 
-    # Build the search query from extracted skills
-    if isinstance(skills, list):
-        query = " ".join(skills)
+    if not skills:
+        query = "technical interview questions"
     else:
-        query = str(skills)
+        query = (
+            "Interview questions about "
+            + ", ".join(skills)
+        )
 
     docs = vectordb.similarity_search(
         query,
@@ -60,13 +62,19 @@ def generate_question(vectordb, skills):
             line = line.strip()
 
             if len(line) > 5:
-                questions.append(line + "?")
+                questions.append(
+                    line + "?"
+                )
 
-    # Remove duplicates while preserving order
-    questions = list(dict.fromkeys(questions))
+    # Remove duplicates
+    questions = list(
+        dict.fromkeys(questions)
+    )
 
     if questions:
-        return random.choice(questions)
+        return random.choice(
+            questions
+        )
 
     return "No relevant interview question found."
 
